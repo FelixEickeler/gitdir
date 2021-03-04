@@ -1,11 +1,12 @@
-#!/usr/bin/python3
-import re
-import os
-import urllib.request
-import signal
+# !/usr/bin/python3
 import argparse
 import json
+import os
+import re
+import signal
 import sys
+import urllib.request
+
 from colorama import Fore, Style, init
 
 init()
@@ -34,32 +35,23 @@ def create_url(url):
     """
     From the given url, produce a URL that is compatible with Github's REST API. Can handle blob or tree paths.
     """
-    repo_only_url = re.compile(r"https:\/\/github\.com\/[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}\/[a-zA-Z0-9]+")
-    re_branch = re.compile("/(tree|blob)/(.+?)/")
+    pattern = re.compile(r"https:\/\/github\.com\/(\w*\/\w*)\/\w*\/(\w*)\/([\w\/]*)")
+    match = pattern.match(url)
+    groups = match.groups()
 
     # Check if the given url is a url to a GitHub repo. If it is, tell the
     # user to use 'git clone' to download it
-    if re.match(repo_only_url,url):
+    if not match or len(groups) != 3:
         print_text("✘ The given url is a complete repository. Use 'git clone' to download the repository",
                    "red", in_place=True)
         sys.exit()
 
-    # extract the branch name from the given url (e.g master)
-    branch = re_branch.search(url)
-    download_dirs = url[branch.end():]
-    api_url = (url[:branch.start()].replace("github.com", "api.github.com/repos", 1) +
-              "/contents/" + download_dirs + "?ref=" + branch.group(2))
+    api_url = "https://api.github.com/repos/{0}/contents/{2}?ref={1}".format(*groups)
+    download_dirs = groups[-1]
     return api_url, download_dirs
 
 
-def download(repo_url, flatten=False, output_dir="./"):
-    """ Downloads the files and directories in repo_url. If flatten is specified, the contents of any and all
-     sub-directories will be pulled upwards into the root folder. """
-
-    # generate the url which returns the JSON data
-    api_url, download_dirs = create_url(repo_url)
-
-    # To handle file names.
+def _download(api_url, download_dirs, flatten, output_dir):
     if not flatten:
         if len(download_dirs.split(".")) == 0:
             dir_out = os.path.join(output_dir, download_dirs)
@@ -147,6 +139,15 @@ def download(repo_url, flatten=False, output_dir="./"):
                 download(file["html_url"], flatten, dir_out)
 
     return total_files
+
+
+def download(repo_url, flatten=False, output_dir="./"):
+    """ Downloads the files and directories in repo_url. If flatten is specified, the contents of any and all
+     sub-directories will be pulled upwards into the root folder. """
+
+    # generate the url which returns the JSON data
+    api_url, download_dirs = create_url(repo_url)
+    return _download(api_url, download_dirs, flatten, output_dir)
 
 
 def main():
