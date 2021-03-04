@@ -112,11 +112,13 @@ def _download(api_url, download_dirs, flatten, output_dir):
             else:
                 path = file["path"]
             dirname = os.path.dirname(path)
-
             if dirname != '':
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-            else:
-                pass
+                os.makedirs(dirname, exist_ok=True)
+
+
+
+
+
 
             if file_url is not None:
                 try:
@@ -124,7 +126,7 @@ def _download(api_url, download_dirs, flatten, output_dir):
                     opener.addheaders = [('User-agent', 'Mozilla/5.0')]
                     urllib.request.install_opener(opener)
                     # download the file
-                    urllib.request.urlretrieve(file_url, path)
+                    urllib.request.urlretrieve(file_url, os.path.join(dir_out, path))
 
                     # bring the cursor to the beginning, erase the current line, and dont make a new line
                     print_text("Downloaded: " + Fore.WHITE + "{}".format(file_name), "green", in_place=False, end="\n",
